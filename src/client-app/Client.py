@@ -1,68 +1,106 @@
 import sys
 import requests
+import os
+from dotenv import load_dotenv
+import json
 
-API_BASE_URL = "https://your-api-endpoint.com"  # Replace with your actual API base URL
 
-
-def list_current_students():
-    response = requests.get(f"{API_BASE_URL}/current_students")
+def listCurrentStudents(url):
+    payload = {"path": "/checked-in"}
+    response = requests.get(url, json=payload)
     if response.status_code == 200:
-        students = response.json()
+        students = json.loads(response.json()["body"])
         print("Current Students in Class:")
         for student in students:
-            print(f"- {student['name']}")
+            print(f"- {student["Name"]}, {student["StudentID"]}")
     else:
         print("Failed to retrieve current students.")
 
 
-def list_all_students():
-    response = requests.get(f"{API_BASE_URL}/all_students")
+def listAllStudents(url):
+    payload = {"path": "/registered"}
+    response = requests.get(url, json=payload)
     if response.status_code == 200:
-        students = response.json()
+        students = json.loads(response.json()["body"])
         print("All Registered Students:")
         for student in students:
-            print(f"- {student['name']}: {student['attendance_number']} attendances")
+            print(f"- {student['Name']}, {student["StudentID"]}")
     else:
         print("Failed to retrieve all students.")
 
 
-def create_analytics():
-    response = requests.get(f"{API_BASE_URL}/attendance_analytics")
+def createAnalytics(url):
+    payload = {"path": "/analytics"}
+    response = requests.get(url, json=payload)
     if response.status_code == 200:
-        analytics = response.json()
-        print("Attendance Analytics:")
-        print(f"Attendance Rate: {analytics['attendance_rate']}%")
+        analytics = json.loads(response.json()["body"])
+        calculateAnalytics(analytics)
     else:
         print("Failed to retrieve analytics.")
 
 
-def dismiss_attendance():
-    response = requests.post(f"{API_BASE_URL}/dismiss_attendance")
+def dismissAttendance(url):
+    payload = {"path": "/dismiss"}
+    response = requests.post(url, json=payload)
     if response.status_code == 200:
         print("Attendance for the session has been dismissed.")
     else:
         print("Failed to dismiss attendance.")
 
 
+def endSession(url):
+    payload = {"path": "/end"}
+    response = requests.post(url, json=payload)
+    print(response)
+    if response.status_code == 200:
+        print("Attendance for the session has been dismissed.")
+    else:
+        print("Failed to end session.")
+
+
+def calculateAnalytics(response):
+    totalSessions = len(response["sessions"])
+    registeredStudents = 0
+    avgAttendance = 0.0
+
+    for student in response["registrations"]:
+        registeredStudents += 1
+    for student in response["summaries"]:
+        avgAttendance += float(student["Sessions"]) / float(totalSessions)
+
+    print(f"Total number of sessions: {totalSessions}")
+    print(f"Total number of registered students: {registeredStudents}")
+    print(f"Attendance rate: {avgAttendance * 100:.1f}%")
+
+
 def menu():
+    load_dotenv()
+    baseUrl = os.getenv("API_BASE_URL")
+    print(baseUrl)
+
     while True:
         print("\nSmart Attendance Tracking System")
         print("1. List current students in class")
         print("2. List all registered students with attendance number")
         print("3. Create attendance analytics")
-        print("4. Dismiss attendance for session")
+        print("4. Dismiss attendance time for session")
         print("5. Exit")
+        print("--------------------------------------------------------")
+        print("Simulation commands:")
+        print("6. End of session")
         choice = input("Enter your choice: ")
         if choice == "1":
-            list_current_students()
+            listCurrentStudents(baseUrl)
         elif choice == "2":
-            list_all_students()
+            listAllStudents(baseUrl)
         elif choice == "3":
-            create_analytics()
+            createAnalytics(baseUrl)
         elif choice == "4":
-            dismiss_attendance()
+            dismissAttendance(baseUrl)
         elif choice == "5":
             sys.exit()
+        elif choice == "6":
+            endSession(baseUrl)
         else:
             print("Invalid choice. Please try again.")
 
