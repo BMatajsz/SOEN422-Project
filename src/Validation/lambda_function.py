@@ -90,21 +90,44 @@ def deleteItem(primaryKey, primaryVal, table):
     return response
 
 
-def checkOut(attendanceData, attendanceTime, uid, summaryTable, attendanceTable):
+def checkOut(
+    attendanceData, attendanceTime, uid, summaryTable, attendanceTable, name, studentID
+):
     firstTime = int(attendanceData["Item"]["Timestamp"])
     laterTime = convertTime(datetime.datetime.now())
     diff = calculateTimeDiff(firstTime, laterTime)
+    # print(f"TIMESTAMP: {firstTime}")
+    # print(f"NOW: {laterTime}")
+    # print(f"DIFF: {diff}")
+    # print(f"ATTENDANCE TIME: {attendanceTime}")
+    # print(f"IF DIFF > ATTENDANCE TIME: OK     ELSE: INSUF")
+
     if diff >= int(attendanceTime):
         incrementItem("CardUID", uid, summaryTable, "Sessions")
         deleteItem("CardUID", uid, attendanceTable)
-        return {"statusCode": 200, "body": json.dumps("check-out")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {"action": "check-out", "name": name, "studentID": studentID}
+            ),
+        }
     else:
-        return {"statusCode": 200, "body": json.dumps("Insufficient time")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {"action": "Insufficient time", "name": "", "studentID": ""}
+            ),
+        }
 
 
-def checkIn(sessionData, attendanceTime, uid, attendanceTable):
+def checkIn(sessionData, attendanceTime, uid, attendanceTable, name, studentID):
     firstTime = convertTime(datetime.datetime.now())
-    timeLeft = calculateTimeDiff(int(sessionData["Item"]["End"]), firstTime)
+    timeLeft = calculateTimeDiff(firstTime, int(sessionData["Item"]["End"]))
+    # print(f"END: {int(sessionData["Item"]["End"])}")
+    # print(f"NOW: {firstTime}")
+    # print(f"TIME LEFT: {timeLeft}")
+    # print(f"ATTENDANCE TIME: {attendanceTime}")
+    # print(f"IF TIME LEFT > ATTENDANCE TIME: OK     ELSE: INSUF")
 
     if timeLeft >= int(attendanceTime):
         addItem(
@@ -114,9 +137,19 @@ def checkIn(sessionData, attendanceTime, uid, attendanceTable):
             "Timestamp",
             convertTime(datetime.datetime.now()),
         )
-        return {"statusCode": 200, "body": json.dumps("check-in")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {"action": "check-in", "name": name, "studentID": studentID}
+            ),
+        }
     else:
-        return {"statusCode": 200, "body": json.dumps("Insufficient time")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {"action": "Insufficient time", "name": "", "studentID": ""}
+            ),
+        }
 
 
 def lambda_handler(event, context):
@@ -149,14 +182,31 @@ def lambda_handler(event, context):
 
     # If the student is not registered, validation fails
     if not "Item" in registeredStudent:
-        return {"statusCode": 200, "body": json.dumps("Not registered")}
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                {"action": "Not registered", "name": "", "studentID": ""}
+            ),
+        }
+
+    name = registeredStudent["Item"]["Name"]
+    # print(f"XXXX name: {name}")
+    studentID = registeredStudent["Item"]["StudentID"]
 
     if "Item" in attendanceData:
         return checkOut(
-            attendanceData, attendanceTime, uid, summaryTable, attendanceTable
+            attendanceData,
+            attendanceTime,
+            uid,
+            summaryTable,
+            attendanceTable,
+            name,
+            studentID,
         )
     else:
-        return checkIn(sessionData, attendanceTime, uid, attendanceTable)
+        return checkIn(
+            sessionData, attendanceTime, uid, attendanceTable, name, studentID
+        )
 
     return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
 

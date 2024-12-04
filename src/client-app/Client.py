@@ -3,6 +3,8 @@ import requests
 import os
 from dotenv import load_dotenv
 import json
+import smtplib
+from email.message import EmailMessage
 
 
 def listCurrentStudents(url):
@@ -41,7 +43,7 @@ def createAnalytics(url):
 
 def dismissAttendance(url):
     payload = {"path": "/dismiss"}
-    response = requests.post(url, json=payload)
+    response = requests.get(url, json=payload)
     if response.status_code == 200:
         print("Attendance for the session has been dismissed.")
     else:
@@ -50,10 +52,24 @@ def dismissAttendance(url):
 
 def endSession(url):
     payload = {"path": "/end"}
-    response = requests.post(url, json=payload)
+    response = requests.get(url, json=payload)
     print(response)
     if response.status_code == 200:
-        print("Attendance for the session has been dismissed.")
+        data = json.loads(response.json()["body"])
+        attendanceNumber = data["attendanceNumber"]
+        registrations = data["registrations"]
+        summaries = data["summary"]
+
+        emails = {}
+        for student in registrations:
+            emails[student["CardUID"]] = student["Email"]
+
+        for student in summaries:
+            currAttendance = data["summary"][0]["Sessions"]
+            if currAttendance < attendanceNumber:
+                sendEmail(emails[student["CardUID"]])
+
+        print("Email sent. Session ended.")
     else:
         print("Failed to end session.")
 
@@ -73,6 +89,40 @@ def calculateAnalytics(response):
     print(f"Attendance rate: {avgAttendance * 100:.1f}%")
 
 
+def increaseAttendance(url):
+    payload = {"path": "/increase"}
+    response = requests.get(url, json=payload)
+    if response.status_code == 200:
+        print("Attendance for the session has been increased.")
+    else:
+        print("Failed to increase attendance.")
+
+
+def sendEmail(address):
+    # Email credentials and details
+    senderEmail = "bence.matajsz12@gmail.com"
+    receiverEmail = address
+    appPassword = os.getenv("GOOGLE_APP_PASSWORD")
+
+    # Create the email content
+    msg = EmailMessage()
+    msg.set_content(
+        "This is a warning regarding attendance. Not attending sessions in the future could impact your grade heavily."
+    )
+    msg["Subject"] = "[SOEN 422] Attendance Warning"
+    msg["From"] = senderEmail
+    msg["To"] = receiverEmail
+
+    # Send the email
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(senderEmail, appPassword)
+            server.send_message(msg)
+        print("Email sent successfully")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+
 def menu():
     load_dotenv()
     baseUrl = os.getenv("API_BASE_URL")
@@ -84,10 +134,11 @@ def menu():
         print("2. List all registered students with attendance number")
         print("3. Create attendance analytics")
         print("4. Dismiss attendance time for session")
-        print("5. Exit")
-        print("--------------------------------------------------------")
-        print("Simulation commands:")
+        print("5. Increase attendance time for session")
         print("6. End of session")
+        print("7. Exit")
+        print("--------------------------------------------------------")
+
         choice = input("Enter your choice: ")
         if choice == "1":
             listCurrentStudents(baseUrl)
@@ -98,9 +149,11 @@ def menu():
         elif choice == "4":
             dismissAttendance(baseUrl)
         elif choice == "5":
-            sys.exit()
+            increaseAttendance(baseUrl)
         elif choice == "6":
             endSession(baseUrl)
+        elif choice == "7":
+            sys.exit()
         else:
             print("Invalid choice. Please try again.")
 
