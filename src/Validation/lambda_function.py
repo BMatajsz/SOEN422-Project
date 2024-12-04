@@ -148,7 +148,7 @@ def lambda_handler(event, context):
     attendanceData = getData("CardUID", uid, attendanceTable, None, None)
 
     # If the student is not registered, validation fails
-    if not registeredStudent:
+    if not "Item" in registeredStudent:
         return {"statusCode": 200, "body": json.dumps("Not registered")}
 
     if "Item" in attendanceData:
