@@ -123,6 +123,15 @@ def sendEmail(address):
         print(f"Failed to send email: {e}")
 
 
+def addTag(url):
+    payload = {"path": "/tag"}
+    response = requests.get(url, json=payload)
+    if response.status_code == 200:
+        print("Tag added to registrations.")
+    else:
+        print("Failed to add tag to registrations.")
+
+
 def menu():
     load_dotenv()
     baseUrl = os.getenv("API_BASE_URL")
@@ -131,12 +140,13 @@ def menu():
     while True:
         print("\nSmart Attendance Tracking System")
         print("1. List current students in class")
-        print("2. List all registered students with attendance number")
+        print("2. List all registered students")
         print("3. Create attendance analytics")
         print("4. Dismiss attendance time for session")
         print("5. Increase attendance time for session")
         print("6. End of session")
-        print("7. Exit")
+        print("7. Add tag to registrations")
+        print("8. Exit")
         print("--------------------------------------------------------")
 
         choice = input("Enter your choice: ")
@@ -153,6 +163,8 @@ def menu():
         elif choice == "6":
             endSession(baseUrl)
         elif choice == "7":
+            addTag(baseUrl)
+        elif choice == "8":
             sys.exit()
         else:
             print("Invalid choice. Please try again.")

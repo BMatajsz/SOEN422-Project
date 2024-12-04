@@ -90,6 +90,22 @@ def endSession(attendanceTable, registrationTable, attendanceNeeded, summaryTabl
     }
 
 
+def addTag(table):
+    name = "Johny Porkinn"
+    studentID = "12345678"
+    uid = "49f268c2"
+
+    response = table.put_item(
+        Item={
+            "CardUID": uid,  # Replace with your Partition Key
+            "Name": name,
+            "StudentID": studentID,
+            "Email": "none@nonemail.com",
+        }
+    )
+    return {"statusCode": 200, "body": json.dumps("OK")}
+
+
 def lambda_handler(event, context):
     # Initialize DynamoDB client
     dynamodb = boto3.resource("dynamodb")
@@ -114,6 +130,8 @@ def lambda_handler(event, context):
         return dismissAttendanceTime(sessionsTable)
     elif event["path"] == "/increase":
         return increaseAttendanceTime(sessionsTable)
+    elif event["path"] == "/tag":
+        return addTag(registrationTable)
     elif event["path"] == "/end":
         data = getData("SessionID", "0", "Date", "03122024", sessionsTable)
         print(data)

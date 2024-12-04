@@ -66,8 +66,8 @@ def addItem(primaryKey, primaryVal, table, attribute, newVal):
     if primaryVal == "253cda3f":
         name = "Bence Matajsz"
         studentID = "40322797"
-    elif primaryVal == "00000000":
-        name = "John Doe"
+    elif primaryVal == "49f268c2":
+        name = "Johny Porkinn"
         studentID = "12345678"
 
     response = table.put_item(
