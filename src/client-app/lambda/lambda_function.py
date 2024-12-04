@@ -143,7 +143,7 @@ def lambda_handler(event, context):
         return {"statusCode": 404, "body": json.dumps("Not Found")}
 
 
-""" PseudoCode
+""" OLD PseudoCode
 
 1. List all checked in students:
         Return the whole attendance dataset

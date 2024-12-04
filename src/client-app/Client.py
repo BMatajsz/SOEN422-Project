@@ -138,7 +138,7 @@ def menu():
     print(baseUrl)
 
     while True:
-        print("\nSmart Attendance Tracking System")
+        print("\nSmart Attendance System")
         print("1. List current students in class")
         print("2. List all registered students")
         print("3. Create attendance analytics")

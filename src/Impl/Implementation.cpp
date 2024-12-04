@@ -18,29 +18,28 @@
 MFRC522 myRFID(SS_PIN, RST_PIN); // Create MFRC522 instance.
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
+// Data structure for the http response body
 struct ResponseData {
   String action;
   String name;
   String studentID;
 };
 
+// Declare pins and variables
 const unsigned char GREEN_LED = 12;
 const unsigned char RED_LED = 17;
 const unsigned char BUZZER_PIN = 13;
 const String CARD_UID = " 25 3c da 3f";
+const String TAG_UID = " 49 f2 68 c2";
 unsigned char FLAG = 0;
 
 const char *SSID = "Imm.LeMontfort"; //"SOEN422";
 // const char* password = "m2%a$S88"; //"nibbieking";
-
 /* IPAddress local_IP(172, 30, 140, 172); // static
-
-// Gateway IP address
 IPAddress gateway(172, 30, 140, 129);
-
-// Subnet Mask
 IPAddress subnet(255, 255, 255, 128); */
 
+// Declare AWS API Gateway endpoint and expected responses
 const char *URL = "https://qa74pu7ut9.execute-api.us-east-1.amazonaws.com/"
                   "PostStage/SmartAttendance";
 const String checkInRes = "check-in";
@@ -48,14 +47,13 @@ const String checkOutRes = "check-out";
 
 // Initializes WiFi connection.
 void initWiFi() {
-
   /* if (!WiFi.config(local_IP, gateway, subnet)) {
     Serial.println("Failed to configure Static IP");
   } */
 
   // Connect to Wi-Fi network
   Serial.println("Connecting to Wi-Fi...");
-  WiFi.begin(SSID /* , password */);
+  WiFi.begin(SSID);
 
   // Wait for the Wi-Fi connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -69,6 +67,7 @@ void initWiFi() {
   Serial.println(WiFi.localIP());
 }
 
+// Create a JSON payload from the UID to post
 String createJSONPayload(const String &UID) {
   // Create a JSON document
   StaticJsonDocument<200> doc;
@@ -81,6 +80,7 @@ String createJSONPayload(const String &UID) {
   return jsonString;
 }
 
+// Send POST request to the API Gateway
 ResponseData sendPostRequest(const char *url, const String &jsonPayload) {
   ResponseData response = {"", "", ""}; // Initialize with empty values
 
@@ -120,6 +120,7 @@ ResponseData sendPostRequest(const char *url, const String &jsonPayload) {
   return response;
 }
 
+// Parse the HTTP JSON response
 ResponseData parseJSON(const String &jsonString) {
   StaticJsonDocument<500> doc;
   ResponseData response = {"", "", ""}; // Initialize with empty values
@@ -159,6 +160,7 @@ ResponseData parseJSON(const String &jsonString) {
   return response;
 }
 
+// Display if the request fails
 void displayHttpFail() {
   display.clearDisplay();
 
@@ -173,10 +175,11 @@ void displayHttpFail() {
   delay(2000);
 }
 
+// Setup
 void setup() {
-  Serial.begin(9600); // Initiate a serial communication
-  SPI.begin();        // Initiate  SPI bus
-  myRFID.PCD_Init();  // Initiate MFRC522
+  Serial.begin(9600);
+  SPI.begin();
+  myRFID.PCD_Init();
   Serial.println("Please scan your RFID card...");
   Serial.println();
   pinMode(GREEN_LED, OUTPUT);
@@ -197,10 +200,9 @@ void setup() {
 
   display.clearDisplay();
 
-  // Set text size, color, and start position
-  display.setTextSize(1); // Text size (1 is the smallest, increase as needed)
-  display.setTextColor(SSD1306_WHITE); // Text color
-  display.setCursor(0, 0);             // Starting position
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
 
   // Display text
   display.println("Connecting to WiFi...");
@@ -214,10 +216,9 @@ void setup() {
 void defaultDisplay() {
   display.clearDisplay();
 
-  // Set text size, color, and start position
-  display.setTextSize(2); // Text size (1 is the smallest, increase as needed)
-  display.setTextColor(SSD1306_WHITE); // Text color
-  display.setCursor(16, 0);            // Starting position
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(16, 0);
 
   // Display text
   display.println("SOEN 422");
@@ -233,6 +234,7 @@ void defaultDisplay() {
   display.display();
 }
 
+// Light LEDs and ring buzzer if check-in
 void checkInOutput(unsigned char valid) {
   if (valid) {
     digitalWrite(GREEN_LED, HIGH);
@@ -252,6 +254,7 @@ void checkInOutput(unsigned char valid) {
   }
 }
 
+// Light LEDs and ring buzzer if check-out
 void checkOutOutput(unsigned char valid) {
   if (valid) {
     for (unsigned char i = 0; i < 2; i++) {
@@ -274,6 +277,7 @@ void checkOutOutput(unsigned char valid) {
   }
 }
 
+// Valid read display
 void displayValid(String name, String studentID, unsigned char flag) {
   display.clearDisplay();
 
@@ -307,28 +311,22 @@ void displayValid(String name, String studentID, unsigned char flag) {
 void displayInvalid(String action) {
   display.clearDisplay();
 
-  // Set text size, color, and start position
-  display.setTextSize(2); // Text size (1 is the smallest, increase as needed)
-  display.setTextColor(SSD1306_WHITE); // Text color
-  display.setCursor(24, 24);           // Starting position
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(24, 24);
 
-  // Display text
   display.println("Invalid");
 
-  // Send buffer to the display
   display.display();
   delay(1000);
   display.clearDisplay();
 
-  // Set text size, color, and start position
-  display.setTextSize(1); // Text size (1 is the smallest, increase as needed)
-  display.setTextColor(SSD1306_WHITE); // Text color
-  display.setCursor(0, 0);             // Starting position
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
 
-  // Display text
   display.println(action);
 
-  // Send buffer to the display
   display.display();
 }
 

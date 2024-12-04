@@ -211,7 +211,7 @@ def lambda_handler(event, context):
     return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
 
 
-# New Whole Pseudo-code
+# OLD Whole Pseudo-code
 # 1. Process the event (read card UID from the post request)
 # 2. Search DynamoDB if the card UID is registered for the session
 #       If yes:
