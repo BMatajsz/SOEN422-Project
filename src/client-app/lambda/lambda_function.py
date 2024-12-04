@@ -62,19 +62,30 @@ def dismissAttendanceTime(sessionsTable):
     return {"statusCode": 200, "body": json.dumps("OK")}
 
 
-def endSession(attendanceTable, registrationTable, attendanceNeeded):
+def increaseAttendanceTime(sessionsTable):
+    updateItem(
+        "SessionID", "0", sessionsTable, "AttendanceTime", "999999", "Date", "03122024"
+    )
+    return {"statusCode": 200, "body": json.dumps("OK")}
+
+
+def endSession(attendanceTable, registrationTable, attendanceNeeded, summaryTable):
     scan = attendanceTable.scan()
     with attendanceTable.batch_writer() as batch:
         for each in scan["Items"]:
-            batch.delete_item(
-                Key={"CardUID": each["CardUID"], "Timestamp": each["Timestamp"]}
-            )
+            batch.delete_item(Key={"CardUID": each["CardUID"]})
     scan2 = registrationTable.scan()
     registrationData = scan2["Items"]
+    scan3 = summaryTable.scan()
+    summaryData = scan3["Items"]
     return {
         "statusCode": 200,
         "body": json.dumps(
-            {"attendanceNumber": attendanceNeeded, "registrations": registrationData}
+            {
+                "attendanceNumber": attendanceNeeded,
+                "registrations": registrationData,
+                "summary": summaryData,
+            }
         ),
     }
 
@@ -101,11 +112,15 @@ def lambda_handler(event, context):
         return analytics(sessionsTable, registrationTable, summaryTable)
     elif event["path"] == "/dismiss":
         return dismissAttendanceTime(sessionsTable)
+    elif event["path"] == "/increase":
+        return increaseAttendanceTime(sessionsTable)
     elif event["path"] == "/end":
         data = getData("SessionID", "0", "Date", "03122024", sessionsTable)
         print(data)
         attendanceNeeded = data["Item"]["AttendanceNumber"]
-        return endSession(attendanceTable, registrationTable, attendanceNeeded)
+        return endSession(
+            attendanceTable, registrationTable, attendanceNeeded, summaryTable
+        )
     else:
         return {"statusCode": 404, "body": json.dumps("Not Found")}
 
