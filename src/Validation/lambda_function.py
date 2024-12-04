@@ -81,20 +81,31 @@ def addItem(primaryKey, primaryVal, table, attribute, newVal):
     return response
 
 
-def checkOut(attendanceData, attendanceTime, uid, summaryTable):
+def deleteItem(primaryKey, primaryVal, table):
+    key = {primaryKey: primaryVal}
+
+    response = table.delete_item(
+        Key=key, ReturnValues="ALL_OLD"  # Returns the deleted item attributes
+    )
+    return response
+
+
+def checkOut(attendanceData, attendanceTime, uid, summaryTable, attendanceTable):
     firstTime = int(attendanceData["Item"]["Timestamp"])
     laterTime = convertTime(datetime.datetime.now())
     diff = calculateTimeDiff(firstTime, laterTime)
     if diff >= int(attendanceTime):
         incrementItem("CardUID", uid, summaryTable, "Sessions")
-        return {"statusCode": 200, "body": json.dumps("true")}
+        deleteItem("CardUID", uid, attendanceTable)
+        return {"statusCode": 200, "body": json.dumps("check-out")}
     else:
         return {"statusCode": 200, "body": json.dumps("Insufficient time")}
 
 
 def checkIn(sessionData, attendanceTime, uid, attendanceTable):
     firstTime = convertTime(datetime.datetime.now())
-    timeLeft = calculateTimeDiff(firstTime, sessionData["End"])
+    timeLeft = calculateTimeDiff(int(sessionData["Item"]["End"]), firstTime)
+
     if timeLeft >= int(attendanceTime):
         addItem(
             "CardUID",
@@ -103,6 +114,7 @@ def checkIn(sessionData, attendanceTime, uid, attendanceTable):
             "Timestamp",
             convertTime(datetime.datetime.now()),
         )
+        return {"statusCode": 200, "body": json.dumps("check-in")}
     else:
         return {"statusCode": 200, "body": json.dumps("Insufficient time")}
 
@@ -139,8 +151,10 @@ def lambda_handler(event, context):
     if not registeredStudent:
         return {"statusCode": 200, "body": json.dumps("Not registered")}
 
-    if attendanceData:
-        return checkOut(attendanceData, attendanceTime, uid, summaryTable)
+    if "Item" in attendanceData:
+        return checkOut(
+            attendanceData, attendanceTime, uid, summaryTable, attendanceTable
+        )
     else:
         return checkIn(sessionData, attendanceTime, uid, attendanceTable)
 
