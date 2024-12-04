@@ -6,19 +6,22 @@ import datetime
 
 def convertTime(time):
     secondsInDay = 24 * 60 * 60
-    newTime = divmod(time.days * secondsInDay + time.seconds, 60)
+    newTime = divmod(time.day * secondsInDay + time.second, 60)
     trueTime = newTime[0] * 60 + newTime[1]
     return trueTime
 
 
 def calculateTimeDiff(firstTime, laterTime):
+    # newTime = convertTime(laterTime)
     difference = laterTime - firstTime
-    newTime = convertTime(difference)
-    return newTime
+    return difference
 
 
-def getData(primaryKey, primaryKeyVal, table):
-    key = {primaryKey: primaryKeyVal}
+def getData(primaryKey, primaryKeyVal, table, sortKey, sortVal):
+    key = {primaryKey: primaryKeyVal, sortKey: sortVal}
+
+    if not sortKey:
+        key = {primaryKey: primaryKeyVal}
 
     response = table.get_item(Key=key)
     return response
@@ -27,14 +30,19 @@ def getData(primaryKey, primaryKeyVal, table):
 def incrementItem(primaryKey, primaryVal, table, attribute):
     key = {primaryKey: primaryVal}
 
+    # Get current value
+    response = table.get_item(Key=key)
+    current_value = int(response["Item"].get(attribute, "0"))
+    new_value = current_value + 1
+
+    # Update the value
     response = table.update_item(
         Key=key,
-        UpdateExpression=f"SET {attribute} = if_not_exists({attribute}, :start) + :inc",
+        UpdateExpression=f"SET {attribute} = :new_value",
         ExpressionAttributeValues={
-            ":start": 0,  # Initialize Counter to 0 if it doesn't exist
-            ":inc": 1,  # Increment value
+            ":new_value": str(new_value),
         },
-        ReturnValues="UPDATED_NEW",  # Returns the updated attributes
+        ReturnValues="UPDATED_NEW",
     )
     return response
 
@@ -74,9 +82,10 @@ def addItem(primaryKey, primaryVal, table, attribute, newVal):
 
 
 def checkOut(attendanceData, attendanceTime, uid, summaryTable):
-    firstTime = attendanceData["Timestamp"]
-    diff = calculateTimeDiff(firstTime, datetime.datetime.now())
-    if diff >= attendanceTime:
+    firstTime = int(attendanceData["Item"]["Timestamp"])
+    laterTime = convertTime(datetime.datetime.now())
+    diff = calculateTimeDiff(firstTime, laterTime)
+    if diff >= int(attendanceTime):
         incrementItem("CardUID", uid, summaryTable, "Sessions")
         return {"statusCode": 200, "body": json.dumps("true")}
     else:
@@ -84,8 +93,9 @@ def checkOut(attendanceData, attendanceTime, uid, summaryTable):
 
 
 def checkIn(sessionData, attendanceTime, uid, attendanceTable):
-    timeLeft = calculateTimeDiff(datetime.datetime.now(), sessionData["End"])
-    if timeLeft >= attendanceTime:
+    firstTime = convertTime(datetime.datetime.now())
+    timeLeft = calculateTimeDiff(firstTime, sessionData["End"])
+    if timeLeft >= int(attendanceTime):
         addItem(
             "CardUID",
             uid,
@@ -116,23 +126,23 @@ def lambda_handler(event, context):
     uid = event["UID"].replace(" ", "")
 
     # Getting the session information
-    sessionData = getData("SessionID", 0, sessionsTable)
+    sessionData = getData("SessionID", "0", sessionsTable, "Date", "03122024")
 
     # Getting the registered student and the required attendance time for the session
-    registeredStudent = getData("CardUID", uid, registrationTable)
-    attendanceTime = sessionData["AttendanceTime"]
+    registeredStudent = getData("CardUID", uid, registrationTable, None, None)
+    attendanceTime = sessionData["Item"]["AttendanceTime"]
 
     # Getting the attendance information
-    attendanceData = getData("CardUID", uid, attendanceTable)
+    attendanceData = getData("CardUID", uid, attendanceTable, None, None)
 
     # If the student is not registered, validation fails
-    if registeredStudent:
+    if not registeredStudent:
         return {"statusCode": 200, "body": json.dumps("Not registered")}
 
     if attendanceData:
-        checkOut(attendanceData, attendanceTime, uid, summaryTable)
+        return checkOut(attendanceData, attendanceTime, uid, summaryTable)
     else:
-        checkIn(sessionData, attendanceTime, uid, attendanceTable)
+        return checkIn(sessionData, attendanceTime, uid, attendanceTable)
 
     return {"statusCode": 200, "body": json.dumps("Hello from Lambda!")}
 
